@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAMS - Login</title>
+  <link rel="stylesheet" href="/public/style.css" />
+</head>
+<body>
+  <div class="container" style="max-width: 420px;">
+    <h1>SAMS Login</h1>
+    <p class="small">Use demo accounts from SQL file.</p>
+
+    <form id="loginForm">
+      <div class="row">
+        <select id="role" required>
+          <option value="faculty">Faculty</option>
+          <option value="student">Student</option>
+        </select>
+      </div>
+      <div class="row">
+        <input id="email" type="email" placeholder="Email" required style="width: 100%;" />
+      </div>
+      <div class="row">
+        <input id="password" type="password" placeholder="Password" required style="width: 100%;" />
+      </div>
+      <button type="submit">Login</button>
+      <p id="message"></p>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('message');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      message.textContent = 'Checking...';
+
+      const payload = {
+        role: document.getElementById('role').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+      };
+
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        message.textContent = data.message || 'Login failed';
+        message.className = 'warning';
+        return;
+      }
+
+      message.textContent = data.message;
+      message.className = 'success';
+      window.location.href = data.redirect;
+    });
+  </script>
+</body>
+</html>
