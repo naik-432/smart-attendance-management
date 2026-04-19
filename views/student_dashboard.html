@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAMS - Student Dashboard</title>
+  <link rel="stylesheet" href="/public/style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Student Dashboard</h1>
+    <p id="studentInfo"></p>
+    <h2>Overall Attendance: <span id="overall"></span></h2>
+    <p id="warningText" class="warning"></p>
+
+    <h2>Subject-wise Attendance</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Present</th>
+          <th>Total</th>
+          <th>Percentage</th>
+        </tr>
+      </thead>
+      <tbody id="subjectRows"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const studentId = params.get('student_id');
+
+    async function loadDashboard() {
+      if (!studentId) {
+        document.getElementById('studentInfo').textContent = 'Missing student_id in URL.';
+        return;
+      }
+
+      const res = await fetch(`/student-dashboard?student_id=${studentId}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        document.getElementById('studentInfo').textContent = data.message || 'Unable to load dashboard.';
+        return;
+      }
+
+      document.getElementById('studentInfo').textContent = `${data.student.name} (${data.student.roll_no})`;
+      document.getElementById('overall').textContent = `${data.overallPercentage}%`;
+      document.getElementById('warningText').textContent =
+        data.warning ? 'Warning: Attendance is below 75%.' : '';
+
+      const rows = data.subjects.map((s) => `
+        <tr>
+          <td>${s.subject_name}</td>
+          <td>${s.present_count}</td>
+          <td>${s.total_classes}</td>
+          <td>${s.percentage}%</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('subjectRows').innerHTML = rows;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

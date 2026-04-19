@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SAMS - Faculty Dashboard</title>
+  <link rel="stylesheet" href="/public/style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Faculty Dashboard</h1>
+
+    <div class="row">
+      <select id="subjectSelect"></select>
+      <input type="date" id="attendanceDate" />
+      <button id="loadBtn">Load Students</button>
+      <button id="submitBtn">Submit Attendance</button>
+    </div>
+
+    <p id="status"></p>
+
+    <h2>Mark Attendance</h2>
+    <table id="attendanceTable">
+      <thead>
+        <tr>
+          <th>Roll No</th>
+          <th>Name</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h2>Attendance Report (Selected Date)</h2>
+    <table id="reportTable">
+      <thead>
+        <tr>
+          <th>Roll No</th>
+          <th>Name</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    const subjectSelect = document.getElementById('subjectSelect');
+    const attendanceDate = document.getElementById('attendanceDate');
+    const statusText = document.getElementById('status');
+    const attendanceBody = document.querySelector('#attendanceTable tbody');
+    const reportBody = document.querySelector('#reportTable tbody');
+
+    attendanceDate.value = new Date().toISOString().split('T')[0];
+
+    async function loadSubjects() {
+      const res = await fetch('/subjects');
+      const subjects = await res.json();
+      subjectSelect.innerHTML = subjects
+        .map((s) => `<option value="${s.id}">${s.subject_name}</option>`)
+        .join('');
+    }
+
+    async function loadStudents() {
+      const subject_id = subjectSelect.value;
+      const date = attendanceDate.value;
+      const res = await fetch(`/get-attendance?subject_id=${subject_id}&date=${date}`);
+      const data = await res.json();
+
+      attendanceBody.innerHTML = data.map((row) => `
+        <tr>
+          <td>${row.roll_no}</td>
+          <td>${row.name}</td>
+          <td>
+            <select data-student-id="${row.student_id}">
+              <option value="Present" ${row.status === 'Present' ? 'selected' : ''}>Present</option>
+              <option value="Absent" ${row.status === 'Absent' ? 'selected' : ''}>Absent</option>
+            </select>
+          </td>
+        </tr>
+      `).join('');
+
+      reportBody.innerHTML = data.map((row) => `
+        <tr>
+          <td>${row.roll_no}</td>
+          <td>${row.name}</td>
+          <td>${row.status}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function submitAttendance() {
+      const subject_id = subjectSelect.value;
+      const date = attendanceDate.value;
+      const records = Array.from(attendanceBody.querySelectorAll('select')).map((el) => ({
+        student_id: Number(el.dataset.studentId),
+        status: el.value
+      }));
+
+      const res = await fetch('/mark-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject_id, date, records })
+      });
+
+      const data = await res.json();
+      statusText.textContent = data.message || 'Done';
+      statusText.className = res.ok ? 'success' : 'warning';
+
+      if (res.ok) {
+        loadStudents();
+      }
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', loadStudents);
+    document.getElementById('submitBtn').addEventListener('click', submitAttendance);
+
+    loadSubjects().then(loadStudents);
+  </script>
+</body>
+</html>
